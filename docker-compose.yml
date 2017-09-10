@@ -1,0 +1,25 @@
+version: '3'
+
+services:
+  db:
+    image: mysql:8.0.2
+    ports:
+      - "3306:3306"
+    restart: always
+    volumes:
+#      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - /Users/ryan/Documents/projects/backend/database/data/:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: taskmanager
+  api:
+    depends_on:
+      - db
+    build: .
+    ports:
+      - "81:80"
+      - "8080:8080"
+    restart: always
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
