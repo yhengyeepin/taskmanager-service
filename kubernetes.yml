@@ -76,9 +76,9 @@ spec:
       containers:
       - env:
         - name: DB_HOST
-          value: 184.172.247.22
+          value: db
         - name: DB_PORT
-          value: "31000"
+          value: "3306"
         image: registry.ng.bluemix.net/yheng/taskmanager-service
         name: api
         ports:
