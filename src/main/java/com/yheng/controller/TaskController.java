@@ -1,6 +1,7 @@
 package com.yheng.controller;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -8,7 +9,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.rest.webmvc.RepositoryLinksResource;
 import org.springframework.hateoas.EntityLinks;
 import org.springframework.hateoas.ExposesResourceFor;
+import org.springframework.hateoas.Resource;
 import org.springframework.hateoas.ResourceProcessor;
+import org.springframework.hateoas.Resources;
 import org.springframework.hateoas.mvc.ControllerLinkBuilder;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -22,10 +25,10 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import com.yheng.dto.TaskDTO;
 import com.yheng.entity.Priority;
 import com.yheng.entity.Status;
 import com.yheng.entity.Task;
+import com.yheng.entity.TaskDTO;
 import com.yheng.entity.User;
 import com.yheng.repository.PriorityRepository;
 import com.yheng.repository.StatusRepository;
@@ -48,8 +51,11 @@ ResourceProcessor<RepositoryLinksResource> {
 	
 	@Autowired EntityLinks entityLinks;
 
-	@RequestMapping(value = "/users/{userId}/tasks", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	public @ResponseBody ResponseEntity<?> getTasks( @PathVariable("userId") Integer userId, UriComponentsBuilder builder) {
+	/*
+	 * Gets all tasks owned by a user
+	 */
+	@RequestMapping(value = "/users/{userId}/tasks", method = RequestMethod.GET, produces = "application/hal+json")
+	public @ResponseBody ResponseEntity<Resources<Task>> getTasks( @PathVariable("userId") Integer userId, UriComponentsBuilder builder) {
 
 		Integer ownerId = userId;
 		if (userId == null) {
@@ -65,13 +71,29 @@ ResourceProcessor<RepositoryLinksResource> {
 		List<Task> tasks = taskRepository.findByOwnerId(userId);
 		for (Task task : tasks) {
 			task.add(entityLinks.linkForSingleResource(task).slash(task.getTaskId()).withSelfRel());
+			task.add(entityLinks.linkForSingleResource(task.getOwner()).slash(task.getOwner().getUserId()).withRel("ownedBy"));
+			task.add(entityLinks.linkForSingleResource(task.getModifiedBy()).slash(task.getModifiedBy().getUserId()).withRel("modifiedBy"));
+			Priority priority = task.getPriority();
+			if (priority != null) {
+				task.add(entityLinks.linkForSingleResource(priority).slash(priority.getPriorityId()).withRel("priority"));
+			}
+			Status status = task.getStatus();
+			if (status != null) {
+				task.add(entityLinks.linkForSingleResource(status).slash(status.getStatusId()).withRel("status"));
+			}
 		}
 		
 		HttpHeaders headers = new HttpHeaders();
         headers.setLocation(builder.path("/users/{userId}/tasks").buildAndExpand(userId).toUri());
-        return new ResponseEntity<>(tasks, headers, HttpStatus.ACCEPTED);
+
+        Resources<Task> resources = new Resources<Task>(tasks, entityLinks.linkToCollectionResource(Task.class));
+
+        return new ResponseEntity<Resources<Task>>(resources, HttpStatus.ACCEPTED);
 	}
 	
+	/*
+	 * Creates a new task for a user
+	 */
 	@RequestMapping(value = "/users/{userId}/tasks", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<Task> addTask( @PathVariable("userId") Integer userId, @RequestBody TaskDTO taskDto, UriComponentsBuilder builder) {
 
@@ -96,13 +118,21 @@ ResourceProcessor<RepositoryLinksResource> {
 		Status status = statusRepository.findByText(taskDto.getStatus());
 		taskToBe.setStatus(status);
 		taskRepository.save(taskToBe);
-		//taskToBe.add(ControllerLinkBuilder.linkTo(TaskRepository.class).slash(taskToBe.getTaskId()).withSelfRel());
+		
+		// Add rels
 		taskToBe.add(entityLinks.linkForSingleResource(taskToBe).slash(taskToBe.getTaskId()).withSelfRel());
+		taskToBe.add(ControllerLinkBuilder.linkTo(ControllerLinkBuilder.methodOn(TaskController.class).deleteTask(ownerId, taskToBe.getTaskId())).withRel("delete task"));
+		taskToBe.add(ControllerLinkBuilder.linkTo(ControllerLinkBuilder.methodOn(TaskController.class).updateTask(ownerId, taskToBe.getTaskId(), null, null)).withRel("update task"));
+		taskToBe.add(entityLinks.linkToCollectionResource(Task.class));
+		
 		HttpHeaders headers = new HttpHeaders();
         headers.setLocation(builder.path("/tasks/{id}").buildAndExpand(taskToBe.getTaskId()).toUri());
         return new ResponseEntity<Task>(taskToBe, headers, HttpStatus.CREATED);
 	}
 	
+	/*
+	 * Updates the task of a user
+	 */
 	@RequestMapping(value = "/users/{userId}/tasks/{taskId}", method = RequestMethod.PUT, consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<Task> updateTask( @PathVariable("userId") Integer userId, @PathVariable("taskId") Integer taskId, @RequestBody TaskDTO taskDto, UriComponentsBuilder builder) {
 
@@ -131,26 +161,40 @@ ResourceProcessor<RepositoryLinksResource> {
 		Status status = statusRepository.findByText(taskDto.getStatus());
 		taskToBeUpdated.setStatus(status);
 		taskRepository.save(taskToBeUpdated);
+
+		// Add rels
 		taskToBeUpdated.add(entityLinks.linkForSingleResource(taskToBeUpdated).slash(taskToBeUpdated.getTaskId()).withSelfRel());
+		taskToBeUpdated.add(ControllerLinkBuilder.linkTo(ControllerLinkBuilder.methodOn(TaskController.class).deleteTask(ownerId, taskToBeUpdated.getTaskId())).withRel("delete task"));
+		taskToBeUpdated.add(ControllerLinkBuilder.linkTo(ControllerLinkBuilder.methodOn(TaskController.class).updateTask(ownerId, taskToBeUpdated.getTaskId(), null, null)).withRel("update task"));
+		taskToBeUpdated.add(entityLinks.linkToCollectionResource(Task.class));
+
+		
 		HttpHeaders headers = new HttpHeaders();
         headers.setLocation(builder.path("/tasks/{id}").buildAndExpand(taskToBeUpdated.getTaskId()).toUri());
         return new ResponseEntity<Task>(taskToBeUpdated, headers, HttpStatus.ACCEPTED);
 	}
 	
-	@RequestMapping(value = "/users/{userId}/tasks/{taskId}", method = RequestMethod.DELETE, consumes = MediaType.APPLICATION_JSON_VALUE)
+	/*
+	 * Deletes a task from a user
+	 */
+	@RequestMapping(value = "/users/{userId}/tasks/{taskId}", method = RequestMethod.DELETE)
 	public ResponseEntity<Task> deleteTask( @PathVariable("userId") Integer userId, @PathVariable("taskId") Integer taskId) {
 
 		if (userId == null || taskId == null) {
 			return ResponseEntity.notFound().build();
 		}
 		
-		if (!taskRepository.exists(taskId) || userRepository.exists(userId)) {
+		if (!taskRepository.exists(taskId) || !userRepository.exists(userId)) {
 			return ResponseEntity.notFound().build();
 		}
 		taskRepository.delete(taskId);
+		
         return new ResponseEntity<>(HttpStatus.ACCEPTED);
 	}
 
+	/*
+	 * Gets a specific task of a user
+	 */
 	@RequestMapping(value = "/users/{userId}/tasks/{taskId}", method = RequestMethod.GET)
 	public ResponseEntity<Task> getTask( @PathVariable("userId") Integer userId, @PathVariable("taskId") Integer taskId, UriComponentsBuilder builder) {
 
@@ -173,13 +217,17 @@ ResourceProcessor<RepositoryLinksResource> {
 		task.add(entityLinks.linkForSingleResource(task).slash(task.getTaskId()).withSelfRel());
 		HttpHeaders headers = new HttpHeaders();
         headers.setLocation(builder.path("/tasks/{id}").buildAndExpand(task.getTaskId()).toUri());
+ 
+        // add rels
+        task.add(ControllerLinkBuilder.linkTo(ControllerLinkBuilder.methodOn(TaskController.class).deleteTask(ownerId, task.getTaskId())).withRel("delete task"));
+        task.add(ControllerLinkBuilder.linkTo(ControllerLinkBuilder.methodOn(TaskController.class).updateTask(ownerId, task.getTaskId(), null, null)).withRel("update task"));
+        task.add(entityLinks.linkToCollectionResource(Task.class));
+
         return new ResponseEntity<Task>(task, headers, HttpStatus.ACCEPTED);
 	}
 	
 	@Override
 	public RepositoryLinksResource process(RepositoryLinksResource resource) {
-		// taskToBeUpdated.add(entityLinks.linkForSingleResource(taskToBeUpdated).slash(taskToBeUpdated.getTaskId()).withSelfRel());
-		// entityLinks.
 		resource.add(ControllerLinkBuilder.linkTo(ControllerLinkBuilder.methodOn(TaskController.class).getTasks(null, null)).withRel("get all tasks of a user"));
 		resource.add(ControllerLinkBuilder.linkTo(ControllerLinkBuilder.methodOn(TaskController.class).addTask(null, null, null)).withRel("add a task to a user"));
 		resource.add(ControllerLinkBuilder.linkTo(ControllerLinkBuilder.methodOn(TaskController.class).getTask(null, null, null)).withRel("get a task of a user"));

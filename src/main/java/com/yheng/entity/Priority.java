@@ -9,12 +9,14 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
+import org.springframework.hateoas.ResourceSupport;
+
 import lombok.Data;
 
 @Entity
 @Data
-@Table(name = "priorities")
-public class Priority implements Serializable {
+@Table(name = "Priorities")
+public class Priority extends ResourceSupport implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 

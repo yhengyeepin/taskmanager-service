@@ -1,4 +1,4 @@
-package com.yheng.dto;
+package com.yheng.entity;
 
 import java.util.Date;
 

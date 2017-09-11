@@ -29,7 +29,9 @@ CREATE TABLE `TaskMedia` (
   `MediaType` varchar(25) NOT NULL,
   `MediaName` varchar(45) NOT NULL,
   `UploadedDate` datetime NOT NULL,
-  PRIMARY KEY (`MediaID`)
+  PRIMARY KEY (`MediaID`),
+  KEY `FK_TASK_idx` (`TaskID`),
+  CONSTRAINT `FK_TASK` FOREIGN KEY (`TaskID`) REFERENCES `tasks` (`taskid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -51,4 +53,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-09-08  7:54:07
+-- Dump completed on 2017-09-10 15:50:41

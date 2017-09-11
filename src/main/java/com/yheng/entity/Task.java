@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.Data;
 
 @Entity
-@Table(name = "tasks")
+@Table(name = "Tasks")
 @Data
 public class Task extends ResourceSupport implements Serializable {
 	
@@ -47,6 +47,7 @@ public class Task extends ResourceSupport implements Serializable {
 	@JoinColumn(name="PriorityID", nullable = true, insertable = true)
 	private Priority priority;
 	
+	@JsonManagedReference
 	@OneToOne(fetch = FetchType.EAGER, optional = true)
 	@JoinColumn(name="StatusID", nullable = true, insertable = true)
 	private Status status;
@@ -55,7 +56,7 @@ public class Task extends ResourceSupport implements Serializable {
 	@JsonFormat(pattern="yyyy-MM-dd")
 	private Date dueDate;
 	
-	@JsonManagedReference
+	// @JsonManagedReference
 	@ManyToOne
     @JoinColumn(name = "ModifiedBy", foreignKey = @ForeignKey(name = "FK_MODIFIED_BY"))
 	private User modifiedBy;

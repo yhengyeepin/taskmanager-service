@@ -15,7 +15,12 @@ spec:
         io.kompose.service: api
     spec:
       containers:
-      - image: api
+      - env:
+        - name: DB_HOST
+          value: db
+        - name: DB_PORT
+          value: "3306"
+        image: registry.ng.bluemix.net/yheng/taskmanager-service
         name: api
         ports:
         - containerPort: 80

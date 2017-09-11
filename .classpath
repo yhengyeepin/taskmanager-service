@@ -5,6 +5,7 @@
 	<classpathentry including="**/*.java" kind="src" path="src/main/java"/>
 	<classpathentry excluding="**/*.java|**/application*.yml|**/application*.yaml|**/application*.properties" kind="src" path="src/main/resources"/>
 	<classpathentry kind="src" path="src/dev/resources"/>
+	<classpathentry kind="src" path="src/staging/resources"/>
 	<classpathentry kind="var" path="M2_REPO/javax/validation/validation-api/1.1.0.Final/validation-api-1.1.0.Final.jar"/>
 	<classpathentry kind="var" path="M2_REPO/javax/transaction/javax.transaction-api/1.2/javax.transaction-api-1.2.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>

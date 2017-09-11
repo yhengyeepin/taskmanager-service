@@ -14,14 +14,16 @@ import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
+import org.springframework.hateoas.ResourceSupport;
+
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
 import lombok.Data;
 
 @Entity
-@Table(name = "users")
+@Table(name = "Users")
 @Data
-public class User implements Serializable {
+public class User extends ResourceSupport implements Serializable {
 	
 	private static final long serialVersionUID = 1L;
 	
@@ -42,7 +44,7 @@ public class User implements Serializable {
 	@Column(name = "IsAdmin")
 	private boolean isAdmin;
 	
-	@JsonBackReference
+	// @JsonBackReference
 	@OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
 	@JoinColumn(name = "ownedBy")
 	private List<Task> tasks = new ArrayList<Task>();
